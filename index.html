@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VBV Card Checker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+        h1 { 
+            text-align: center;
+            color: #333;
+            margin-bottom: 1.5rem;
+            font-weight: 300;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+        .approved {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .declined {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+        .example {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .info {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #667eea;
+        }
+        .info h3 {
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        .info ul {
+            margin-left: 1rem;
+        }
+        .info li {
+            margin-bottom: 0.25rem;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 VBV Card Checker</h1>
+        
+        <div class="info">
+            <h3>Como usar:</h3>
+            <ul>
+                <li>Digite os dados do cartão no formato: <strong>NUMERO|MES|ANO|CVV</strong></li>
+                <li>Exemplo: <code>5122672221909912|02|2031|386</code></li>
+                <li>O sistema detecta automaticamente marca e banco</li>
+                <li>Processa autenticação 3D Secure (VBV/SecureCode)</li>
+            </ul>
+        </div>
+
+        <div class="form-group">
+            <label for="cardData">Dados do Cartão:</label>
+            <input type="text" id="cardData" placeholder="5122672221909912|02|2031|386">
+            <div class="example">Formato: NUMERO|MES|ANO|CVV</div>
+        </div>
+
+        <button onclick="checkCard()" id="checkBtn">🔍 Verificar Cartão</button>
+
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function checkCard() {
+            const cardData = document.getElementById('cardData').value.trim();
+            const resultDiv = document.getElementById('result');
+            const checkBtn = document.getElementById('checkBtn');
+            
+            if (!cardData) {
+                alert('Por favor, digite os dados do cartão!');
+                return;
+            }
+            
+            if (!cardData.includes('|') || cardData.split('|').length !== 4) {
+                alert('Formato inválido! Use: NUMERO|MES|ANO|CVV');
+                return;
+            }
+            
+            // Mostrar loading
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = '⏳ Processando cartão...\n🔐 Criptografando dados...\n🌐 Conectando ao gateway...\n🔍 Verificando 3D Secure...';
+            
+            checkBtn.disabled = true;
+            checkBtn.textContent = '⏳ Processando...';
+            
+            try {
+                const response = await fetch(`/api/checker?lista=${encodeURIComponent(cardData)}`);
+                const data = await response.json();
+                
+                // Mostrar resultado
+                if (data.status === 'Aprovada') {
+                    resultDiv.className = 'result approved';
+                    resultDiv.textContent = `✅ ${data.status} ↣ ${data.card} ↣ ${data.message} ${data.info} ↣ (${data.time})`;
+                } else {
+                    resultDiv.className = 'result declined';  
+                    resultDiv.textContent = `❌ ${data.status} ↣ ${data.card} ↣ ${data.message} ${data.info} ↣ (${data.time})`;
+                }
+                
+            } catch (error) {
+                resultDiv.className = 'result declined';
+                resultDiv.textContent = `❌ Erro: ${error.message}`;
+            }
+            
+            // Restaurar botão
+            checkBtn.disabled = false;
+            checkBtn.textContent = '🔍 Verificar Cartão';
+        }
+        
+        // Permitir Enter para enviar
+        document.getElementById('cardData').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkCard();
+            }
+        });
+    </script>
+</body>
+</html>

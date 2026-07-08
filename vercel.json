@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/checker.js": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/checker",
+      "destination": "/api/checker"
+    }
+  ]
+}
